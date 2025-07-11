@@ -30,10 +30,10 @@ export default function GlucoPatchBLE() {
     try {
       log("🔎 Requesting BLE device...");
 
-      const device = (await navigator.bluetooth.requestDevice({
-        filters: [{ namePrefix: "ESP32" }],
-        optionalServices: [SERVICE_UUID],
-      })) as BluetoothDevice & { name?: string };
+      const device = await navigator.bluetooth.requestDevice({
+  acceptAllDevices: true,
+  optionalServices: [SERVICE_UUID],
+}) as BluetoothDevice;
 
       log(`✅ Device found: ${device.name || "Unnamed device"}`);
 
