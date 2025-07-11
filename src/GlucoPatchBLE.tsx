@@ -87,7 +87,6 @@ export default function GlucoPatchBLE() {
         <div style={{ marginTop: 20 }}>
           <h2>🧪 Glucose: {glucoseData.glucose_mg_dL} mg/dL</h2>
           <p>🌡️ Temperature: {glucoseData.temperature_C.toFixed(2)} °C</p>
-          <p>🕒 Timestamp: {glucoseData.timestamp}</p>
         </div>
       )}
 
