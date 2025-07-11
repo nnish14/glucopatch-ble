@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface GlucoseData {
   timestamp: string;
@@ -35,12 +35,13 @@ export default function GlucoPatchBLE() {
         optionalServices: [SERVICE_UUID],
       });
 
-      log(`✅ Device found: ${device.name}`);
+      log(`✅ Device found: ${device.name ?? "Unnamed device"}`);
 
-      device.addEventListener("gattserverdisconnected", () => {
+      // Avoid TS error on event
+      device.ongattserverdisconnected = () => {
         log("⚠️ BLE disconnected.");
         setConnected(false);
-      });
+      };
 
       const server = await device.gatt?.connect();
       log("🔗 Connected to GATT server.");
@@ -74,7 +75,7 @@ export default function GlucoPatchBLE() {
 
       setConnected(true);
     } catch (err: any) {
-      log("❌ BLE error: " + (err?.message || err));
+      log("❌ BLE connect error: " + (err?.message || err));
     }
   };
 
