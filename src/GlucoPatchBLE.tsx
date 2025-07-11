@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from "react";
 
+interface GlucoseData {
+  timestamp: string;
+  glucose_mg_dL: number;
+  temperature_C: number;
+}
+
 export default function GlucoPatchBLE() {
-  const [glucoseData, setGlucoseData] = useState(null);
+  const [glucoseData, setGlucoseData] = useState<GlucoseData | null>(null);
   const [connected, setConnected] = useState(false);
 
   const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
@@ -14,20 +20,23 @@ export default function GlucoPatchBLE() {
         optionalServices: [SERVICE_UUID],
       });
 
-      const server = await device.gatt.connect();
-      const service = await server.getPrimaryService(SERVICE_UUID);
-      const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+      const server = await device.gatt?.connect();
+      const service = await server?.getPrimaryService(SERVICE_UUID);
+      const characteristic = await service?.getCharacteristic(CHARACTERISTIC_UUID);
 
-      await characteristic.startNotifications();
-      characteristic.addEventListener("characteristicvaluechanged", handleData);
+      await characteristic?.startNotifications();
+      characteristic?.addEventListener("characteristicvaluechanged", handleData);
       setConnected(true);
     } catch (err) {
       console.error("BLE connection failed:", err);
     }
   };
 
-  const handleData = (event) => {
-    const jsonStr = new TextDecoder().decode(event.target.value);
+  const handleData = (event: Event) => {
+    const value = (event.target as BluetoothRemoteGATTCharacteristic).value;
+    if (!value) return;
+
+    const jsonStr = new TextDecoder().decode(value.buffer);
     try {
       const parsed = JSON.parse(jsonStr);
       setGlucoseData(parsed);
