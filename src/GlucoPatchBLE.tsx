@@ -1,9 +1,10 @@
 import { useState } from "react";
 
 interface GlucoseData {
-  timestamp: string;
+  timestamp?: string;
   glucose_mg_dL: number;
   temperature_C: number;
+  uptime: string;
 }
 
 export default function GlucoPatchBLE() {
@@ -87,7 +88,7 @@ export default function GlucoPatchBLE() {
         <div style={{ marginTop: 20 }}>
           <h2>🧪 Glucose: {glucoseData.glucose_mg_dL} mg/dL</h2>
           <p>🌡️ Temperature: {glucoseData.temperature_C.toFixed(2)} °C</p>
-          <p>🕰️ Timestamp: {glucoseData.timestamp}</p>
+          <p>🕒 Last Sync: {new Date().toLocaleTimeString()}</p>
         </div>
       )}
 
