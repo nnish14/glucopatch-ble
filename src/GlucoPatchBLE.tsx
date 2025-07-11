@@ -30,18 +30,17 @@ export default function GlucoPatchBLE() {
     try {
       log("🔎 Requesting BLE device...");
 
-      const device = await navigator.bluetooth.requestDevice({
+      const device = (await navigator.bluetooth.requestDevice({
         filters: [{ namePrefix: "ESP32" }],
         optionalServices: [SERVICE_UUID],
-      });
+      })) as BluetoothDevice & { name?: string };
 
-      log(`✅ Device found: ${device.name ?? "Unnamed device"}`);
+      log(`✅ Device found: ${device.name || "Unnamed device"}`);
 
-      // Avoid TS error on event
-      device.ongattserverdisconnected = () => {
+      (device as any).addEventListener("gattserverdisconnected", () => {
         log("⚠️ BLE disconnected.");
         setConnected(false);
-      };
+      });
 
       const server = await device.gatt?.connect();
       log("🔗 Connected to GATT server.");
