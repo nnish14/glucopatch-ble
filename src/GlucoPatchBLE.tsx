@@ -35,8 +35,6 @@ export default function GlucoPatchBLE() {
   optionalServices: [SERVICE_UUID],
 }) as BluetoothDevice;
 
-console.log(`✅ Connected to: ${device.name ?? "Unnamed device"}`);
-
       (device as any).addEventListener("gattserverdisconnected", () => {
         log("⚠️ BLE disconnected.");
         setConnected(false);
