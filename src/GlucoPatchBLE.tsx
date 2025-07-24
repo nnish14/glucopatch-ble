@@ -1,8 +1,4 @@
 import { useState, useEffect } from "react";
-import { Chart, LineController, LineElement, PointElement, LinearScale, TimeScale, Title, Tooltip, Legend } from "chart.js";
-import "chartjs-adapter-date-fns";
-
-Chart.register(LineController, LineElement, PointElement, LinearScale, TimeScale, Title, Tooltip, Legend);
 
 interface GlucoseData {
   timestamp?: string;
@@ -82,55 +78,98 @@ const GlucoPatchBLE: React.FC = () => {
   };
 
   useEffect(() => {
-    const ctxGlucose = document.getElementById("glucoseChart") as HTMLCanvasElement;
-    const ctxTemperature = document.getElementById("temperatureChart") as HTMLCanvasElement;
+    const glucoseCanvas = document.getElementById("glucoseChart") as HTMLCanvasElement;
+    const temperatureCanvas = document.getElementById("temperatureChart") as HTMLCanvasElement;
+    const glucoseCtx = glucoseCanvas?.getContext("2d");
+    const temperatureCtx = temperatureCanvas?.getContext("2d");
 
-    const glucoseChart = new Chart(ctxGlucose, {
-      type: "line",
-      data: {
-        datasets: [{
-          label: "Glucose (mg/dL)",
-          data: dataPoints.map((point) => ({ x: point.time, y: point.glucose })),
-          borderColor: "#3b82f6",
-          backgroundColor: "rgba(59, 130, 246, 0.2)",
-          fill: true,
-          tension: 0.4,
-        }],
-      },
-      options: {
-        scales: {
-          x: { type: "time", time: { unit: "minute" }, title: { display: true, text: "Time" } },
-          y: { title: { display: true, text: "Glucose (mg/dL)" }, beginAtZero: false },
-        },
-        plugins: { legend: { display: true } },
-      },
-    });
+    if (!glucoseCtx || !temperatureCtx) return;
 
-    const temperatureChart = new Chart(ctxTemperature, {
-      type: "line",
-      data: {
-        datasets: [{
-          label: "Temperature (°C)",
-          data: dataPoints.map((point) => ({ x: point.time, y: point.temperature })),
-          borderColor: "#ef4444",
-          backgroundColor: "rgba(239, 68, 68, 0.2)",
-          fill: true,
-          tension: 0.4,
-        }],
-      },
-      options: {
-        scales: {
-          x: { type: "time", time: { unit: "minute" }, title: { display: true, text: "Time" } },
-          y: { title: { display: true, text: "Temperature (°C)" }, beginAtZero: false },
-        },
-        plugins: { legend: { display: true } },
-      },
-    });
+    // Clear canvases
+    glucoseCtx.clearRect(0, 0, glucoseCanvas.width, glucoseCanvas.height);
+    temperatureCtx.clearRect(0, 0, temperatureCanvas.width, temperatureCanvas.height);
 
-    return () => {
-      glucoseChart.destroy();
-      temperatureChart.destroy();
+    // Canvas dimensions
+    const width = glucoseCanvas.width;
+    const height = glucoseCanvas.height;
+
+    // Draw grid and labels
+    const drawGrid = (ctx: CanvasRenderingContext2D, yLabel: string) => {
+      ctx.strokeStyle = "#e5e7eb";
+      ctx.lineWidth = 1;
+      // Vertical grid lines (time)
+      for (let x = 50; x < width; x += (width - 50) / 5) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height - 30);
+        ctx.stroke();
+      }
+      // Horizontal grid lines (value)
+      for (let y = 30; y < height - 30; y += (height - 60) / 5) {
+        ctx.beginPath();
+        ctx.moveTo(50, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+      // Axes
+      ctx.strokeStyle = "#374151";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(50, 30);
+      ctx.lineTo(50, height - 30);
+      ctx.lineTo(width, height - 30);
+      ctx.stroke();
+      // Labels
+      ctx.fillStyle = "#374151";
+      ctx.font = "12px sans-serif";
+      ctx.fillText(yLabel, 10, 30);
+      ctx.fillText("Time", width - 30, height - 10);
     };
+
+    // Draw data points
+    const drawData = (
+      ctx: CanvasRenderingContext2D,
+      data: number[],
+      maxValue: number,
+      color: string
+    ) => {
+      if (data.length < 2) return;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const xStep = (width - 50) / (data.length - 1);
+      data.forEach((value, i) => {
+        const x = 50 + i * xStep;
+        const y = height - 30 - ((value / maxValue) * (height - 60));
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      ctx.stroke();
+      // Draw points
+      ctx.fillStyle = color;
+      data.forEach((value, i) => {
+        const x = 50 + i * xStep;
+        const y = height - 30 - ((value / maxValue) * (height - 60));
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+    };
+
+    // Normalize data
+    const glucoseValues = dataPoints.map((point) => point.glucose);
+    const temperatureValues = dataPoints.map((point) => point.temperature);
+    const maxGlucose = Math.max(...glucoseValues, 200) || 200; // Default max
+    const maxTemperature = Math.max(...temperatureValues, 40) || 40; // Default max
+
+    // Draw charts
+    drawGrid(glucoseCtx, "Glucose (mg/dL)");
+    drawGrid(temperatureCtx, "Temperature (°C)");
+    drawData(glucoseCtx, glucoseValues, maxGlucose, "#3b82f6");
+    drawData(temperatureCtx, temperatureValues, maxTemperature, "#ef4444");
   }, [dataPoints]);
 
   return (
@@ -157,11 +196,11 @@ const GlucoPatchBLE: React.FC = () => {
             </div>
             <div className="bg-gray-50 p-4 rounded-lg shadow">
               <h2 className="text-xl font-semibold text-gray-700">📊 Glucose Trend</h2>
-              <canvas id="glucoseChart" className="w-full h-64"></canvas>
+              <canvas id="glucoseChart" width="400" height="200" className="w-full"></canvas>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg shadow md:col-span-2">
               <h2 className="text-xl font-semibold text-gray-700">🌡️ Temperature Trend</h2>
-              <canvas id="temperatureChart" className="w-full h-64"></canvas>
+              <canvas id="temperatureChart" width="400" height="200" className="w-full"></canvas>
             </div>
           </div>
         )}
