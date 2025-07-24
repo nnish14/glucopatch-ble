@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { Chart } from "chart.js/auto";
+import { Chart, LineController, LineElement, PointElement, LinearScale, TimeScale, Title, Tooltip, Legend } from "chart.js";
 import "chartjs-adapter-date-fns";
+
+Chart.register(LineController, LineElement, PointElement, LinearScale, TimeScale, Title, Tooltip, Legend);
 
 interface GlucoseData {
   timestamp?: string;
