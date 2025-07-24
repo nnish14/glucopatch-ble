@@ -83,47 +83,67 @@ const GlucoPatchBLE: React.FC = () => {
     const glucoseCtx = glucoseCanvas?.getContext("2d");
     const temperatureCtx = temperatureCanvas?.getContext("2d");
 
-    if (!glucoseCtx || !temperatureCtx) return;
+    if (!glucoseCtx || !temperatureCtx || !glucoseCanvas || !temperatureCanvas) {
+      log("❌ Canvas context or element not found.");
+      return;
+    }
+
+    // Set canvas size to match CSS dimensions
+    const dpr = window.devicePixelRatio || 1;
+    glucoseCanvas.width = glucoseCanvas.offsetWidth * dpr;
+    glucoseCanvas.height = 200 * dpr;
+    temperatureCanvas.width = temperatureCanvas.offsetWidth * dpr;
+    temperatureCanvas.height = 200 * dpr;
+    glucoseCtx.scale(dpr, dpr);
+    temperatureCtx.scale(dpr, dpr);
 
     // Clear canvases
-    glucoseCtx.clearRect(0, 0, glucoseCanvas.width, glucoseCanvas.height);
-    temperatureCtx.clearRect(0, 0, temperatureCanvas.width, temperatureCanvas.height);
+    glucoseCtx.clearRect(0, 0, glucoseCanvas.width / dpr, glucoseCanvas.height / dpr);
+    temperatureCtx.clearRect(0, 0, temperatureCanvas.width / dpr, temperatureCanvas.height / dpr);
 
-    // Canvas dimensions
-    const width = glucoseCanvas.width;
-    const height = glucoseCanvas.height;
+    // Canvas dimensions (CSS pixels)
+    const width = glucoseCanvas.offsetWidth;
+    const height = 200;
 
     // Draw grid and labels
-    const drawGrid = (ctx: CanvasRenderingContext2D, yLabel: string) => {
+    const drawGrid = (ctx: CanvasRenderingContext2D, yLabel: string, maxValue: number) => {
       ctx.strokeStyle = "#e5e7eb";
       ctx.lineWidth = 1;
       // Vertical grid lines (time)
-      for (let x = 50; x < width; x += (width - 50) / 5) {
+      for (let x = 50; x <= width - 10; x += (width - 60) / 5) {
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height - 30);
+        ctx.moveTo(x, 20);
+        ctx.lineTo(x, height - 20);
         ctx.stroke();
       }
       // Horizontal grid lines (value)
-      for (let y = 30; y < height - 30; y += (height - 60) / 5) {
+      for (let y = 20; y <= height - 20; y += (height - 40) / 5) {
         ctx.beginPath();
         ctx.moveTo(50, y);
-        ctx.lineTo(width, y);
+        ctx.lineTo(width - 10, y);
         ctx.stroke();
+        // Y-axis value labels
+        const value = maxValue - ((y - 20) / (height - 40)) * maxValue;
+        ctx.fillStyle = "#374151";
+        ctx.font = "10px sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(value.toFixed(0), 45, y + 3);
       }
       // Axes
       ctx.strokeStyle = "#374151";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(50, 30);
-      ctx.lineTo(50, height - 30);
-      ctx.lineTo(width, height - 30);
+      ctx.moveTo(50, 20);
+      ctx.lineTo(50, height - 20);
+      ctx.lineTo(width - 10, height - 20);
       ctx.stroke();
       // Labels
       ctx.fillStyle = "#374151";
       ctx.font = "12px sans-serif";
-      ctx.fillText(yLabel, 10, 30);
-      ctx.fillText("Time", width - 30, height - 10);
+      ctx.textAlign = "left";
+      ctx.fillText(yLabel, 10, 20);
+      ctx.textAlign = "center";
+      ctx.fillText("Time", width - 30, height - 5);
     };
 
     // Draw data points
@@ -133,14 +153,14 @@ const GlucoPatchBLE: React.FC = () => {
       maxValue: number,
       color: string
     ) => {
-      if (data.length < 2) return;
+      if (data.length < 1) return;
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      const xStep = (width - 50) / (data.length - 1);
+      const xStep = data.length > 1 ? (width - 60) / (data.length - 1) : 0;
       data.forEach((value, i) => {
         const x = 50 + i * xStep;
-        const y = height - 30 - ((value / maxValue) * (height - 60));
+        const y = height - 20 - ((value / maxValue) * (height - 40));
         if (i === 0) {
           ctx.moveTo(x, y);
         } else {
@@ -152,22 +172,27 @@ const GlucoPatchBLE: React.FC = () => {
       ctx.fillStyle = color;
       data.forEach((value, i) => {
         const x = 50 + i * xStep;
-        const y = height - 30 - ((value / maxValue) * (height - 60));
+        const y = height - 20 - ((value / maxValue) * (height - 40));
         ctx.beginPath();
         ctx.arc(x, y, 3, 0, 2 * Math.PI);
         ctx.fill();
+        // Data point labels
+        ctx.fillStyle = "#374151";
+        ctx.font = "10px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(value.toFixed(1), x, y - 10);
       });
     };
 
     // Normalize data
     const glucoseValues = dataPoints.map((point) => point.glucose);
     const temperatureValues = dataPoints.map((point) => point.temperature);
-    const maxGlucose = Math.max(...glucoseValues, 200) || 200; // Default max
-    const maxTemperature = Math.max(...temperatureValues, 40) || 40; // Default max
+    const maxGlucose = Math.max(...(glucoseValues.length ? glucoseValues : [200]), 200);
+    const maxTemperature = Math.max(...(temperatureValues.length ? temperatureValues : [40]), 40);
 
     // Draw charts
-    drawGrid(glucoseCtx, "Glucose (mg/dL)");
-    drawGrid(temperatureCtx, "Temperature (°C)");
+    drawGrid(glucoseCtx, "Glucose (mg/dL)", maxGlucose);
+    drawGrid(temperatureCtx, "Temperature (°C)", maxTemperature);
     drawData(glucoseCtx, glucoseValues, maxGlucose, "#3b82f6");
     drawData(temperatureCtx, temperatureValues, maxTemperature, "#ef4444");
   }, [dataPoints]);
@@ -196,11 +221,11 @@ const GlucoPatchBLE: React.FC = () => {
             </div>
             <div className="bg-gray-50 p-4 rounded-lg shadow">
               <h2 className="text-xl font-semibold text-gray-700">📊 Glucose Trend</h2>
-              <canvas id="glucoseChart" width="400" height="200" className="w-full"></canvas>
+              <canvas id="glucoseChart" style={{ width: '100%', height: '200px' }}></canvas>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg shadow md:col-span-2">
               <h2 className="text-xl font-semibold text-gray-700">🌡️ Temperature Trend</h2>
-              <canvas id="temperatureChart" width="400" height="200" className="w-full"></canvas>
+              <canvas id="temperatureChart" style={{ width: '100%', height: '200px' }}></canvas>
             </div>
           </div>
         )}
