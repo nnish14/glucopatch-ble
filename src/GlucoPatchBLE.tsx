@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import Chart from "chart.js/auto";
+import { Chart as ChartJS } from "chart.js";
+import "chartjs-adapter-date-fns";
 
 interface GlucoseData {
   timestamp?: string;
@@ -34,10 +37,11 @@ const GlucoPatchBLE: React.FC = () => {
         optionalServices: [SERVICE_UUID],
       }) as BluetoothDevice;
 
-      device.addEventListener("gattserverdisconnected", () => {
+      // Use type assertion for gattserverdisconnected event
+      (device as any).ongattserverdisconnected = () => {
         log("⚠️ BLE disconnected.");
         setConnected(false);
-      });
+      };
 
       const server = await device.gatt?.connect();
       log("🔗 Connected to GATT server.");
@@ -81,7 +85,7 @@ const GlucoPatchBLE: React.FC = () => {
     const ctxGlucose = document.getElementById("glucoseChart") as HTMLCanvasElement;
     const ctxTemperature = document.getElementById("temperatureChart") as HTMLCanvasElement;
 
-    const glucoseChart = new Chart(ctxGlucose, {
+    const glucoseChart = new ChartJS(ctxGlucose, {
       type: "line",
       data: {
         datasets: [{
@@ -102,7 +106,7 @@ const GlucoPatchBLE: React.FC = () => {
       },
     });
 
-    const temperatureChart = new Chart(ctxTemperature, {
+    const temperatureChart = new ChartJS(ctxTemperature, {
       type: "line",
       data: {
         datasets: [{
